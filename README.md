@@ -8,7 +8,7 @@
 
 ```
 -- Добавьте в начало вашего скрипта:
-local TelaryUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/sinagood-blip/TelaryUI/main/TelaryUI.lua"))()
+local TelaryUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/sinagood24-blip/TelaryUI/main/TelaryUI.lua"))()
 
 🏗️ Создание окна
 Базовое окно
