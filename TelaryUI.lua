@@ -14,55 +14,7 @@ local HttpService = game:GetService("HttpService")
 local TelaryUI = {}
 TelaryUI.__index = TelaryUI
 
--- Расширенная цветовая схема с неоновыми темами
-local Themes = {
-    Cyber = {
-        Background = Color3.fromRGB(10, 10, 20),
-        Secondary = Color3.fromRGB(20, 20, 35),
-        Accent = Color3.fromRGB(0, 255, 255),
-        Text = Color3.fromRGB(255, 255, 255),
-        Success = Color3.fromRGB(0, 255, 128),
-        Warning = Color3.fromRGB(255, 255, 0),
-        Error = Color3.fromRGB(255, 50, 50),
-        Border = Color3.fromRGB(0, 150, 255),
-        Glow = Color3.fromRGB(0, 200, 255)
-    },
-    Neon = {
-        Background = Color3.fromRGB(15, 5, 25),
-        Secondary = Color3.fromRGB(25, 10, 40),
-        Accent = Color3.fromRGB(255, 0, 255),
-        Text = Color3.fromRGB(255, 255, 255),
-        Success = Color3.fromRGB(0, 255, 0),
-        Warning = Color3.fromRGB(255, 165, 0),
-        Error = Color3.fromRGB(255, 0, 0),
-        Border = Color3.fromRGB(150, 0, 255),
-        Glow = Color3.fromRGB(255, 0, 255)
-    },
-    Matrix = {
-        Background = Color3.fromRGB(0, 10, 0),
-        Secondary = Color3.fromRGB(0, 20, 0),
-        Accent = Color3.fromRGB(0, 255, 0),
-        Text = Color3.fromRGB(0, 255, 0),
-        Success = Color3.fromRGB(0, 255, 0),
-        Warning = Color3.fromRGB(200, 255, 0),
-        Error = Color3.fromRGB(255, 50, 0),
-        Border = Color3.fromRGB(0, 100, 0),
-        Glow = Color3.fromRGB(0, 255, 0)
-    },
-    Dark = {
-        Background = Color3.fromRGB(20, 20, 30),
-        Secondary = Color3.fromRGB(30, 30, 45),
-        Accent = Color3.fromRGB(65, 105, 225),
-        Text = Color3.fromRGB(255, 255, 255),
-        Success = Color3.fromRGB(50, 205, 50),
-        Warning = Color3.fromRGB(255, 165, 0),
-        Error = Color3.fromRGB(220, 20, 60),
-        Border = Color3.fromRGB(70, 70, 90),
-        Glow = Color3.fromRGB(100, 100, 255)
-    }
-}
-
--- Утилиты с улучшенной обработкой ошибок
+-- Вспомогательные функции ДО основного кода
 local function SafeTween(Object, Properties, Duration, Style)
     if not Object or not Object.Parent then return end
     local success, result = pcall(function()
@@ -115,6 +67,125 @@ local function CreateAdvancedShadow(Object)
     return Shadow
 end
 
+local function CreateWindowControlButton(Window, Text, Color, Position)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0, 30, 0, 30)
+    Button.Position = Position
+    Button.BackgroundColor3 = Color
+    Button.Text = Text
+    Button.TextColor3 = Window.Theme.Text
+    Button.TextSize = 16
+    Button.Font = Enum.Font.GothamBold
+    Button.Parent = Window.TitleBar
+    RoundCorners(Button, 6)
+    CreateGlow(Button, Color, 0.5)
+    return Button
+end
+
+local function SetupWindowDragging(Window)
+    local Dragging, DragInput, DragStart, StartPos
+    
+    local function Update(input)
+        if not Window.MainFrame then return end
+        local Delta = input.Position - DragStart
+        Window.MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+    end
+    
+    Window.TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Dragging = true
+            DragStart = input.Position
+            StartPos = Window.MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    Dragging = false
+                end
+            end)
+        end
+    end)
+    
+    Window.TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            DragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == DragInput and Dragging then
+            Update(input)
+        end
+    end)
+end
+
+local function SetupWindowControls(Window, CloseButton, MinimizeButton, SettingsButton)
+    if CloseButton then
+        CloseButton.MouseButton1Click:Connect(function()
+            Window:Destroy()
+        end)
+    end
+    
+    if MinimizeButton then
+        MinimizeButton.MouseButton1Click:Connect(function()
+            Window:Minimize()
+        end)
+    end
+    
+    if SettingsButton then
+        SettingsButton.MouseButton1Click:Connect(function()
+            Window:ShowSettings()
+        end)
+    end
+end
+
+-- Расширенная цветовая схема с неоновыми темами
+local Themes = {
+    Cyber = {
+        Background = Color3.fromRGB(10, 10, 20),
+        Secondary = Color3.fromRGB(20, 20, 35),
+        Accent = Color3.fromRGB(0, 255, 255),
+        Text = Color3.fromRGB(255, 255, 255),
+        Success = Color3.fromRGB(0, 255, 128),
+        Warning = Color3.fromRGB(255, 255, 0),
+        Error = Color3.fromRGB(255, 50, 50),
+        Border = Color3.fromRGB(0, 150, 255),
+        Glow = Color3.fromRGB(0, 200, 255)
+    },
+    Neon = {
+        Background = Color3.fromRGB(15, 5, 25),
+        Secondary = Color3.fromRGB(25, 10, 40),
+        Accent = Color3.fromRGB(255, 0, 255),
+        Text = Color3.fromRGB(255, 255, 255),
+        Success = Color3.fromRGB(0, 255, 0),
+        Warning = Color3.fromRGB(255, 165, 0),
+        Error = Color3.fromRGB(255, 0, 0),
+        Border = Color3.fromRGB(150, 0, 255),
+        Glow = Color3.fromRGB(255, 0, 255)
+    },
+    Matrix = {
+        Background = Color3.fromRGB(0, 10, 0),
+        Secondary = Color3.fromRGB(0, 20, 0),
+        Accent = Color3.fromRGB(0, 255, 0),
+        Text = Color3.fromRGB(0, 255, 0),
+        Success = Color3.fromRGB(0, 255, 0),
+        Warning = Color3.fromRGB(200, 255, 0),
+        Error = Color3.fromRGB(255, 50, 0),
+        Border = Color3.fromRGB(0, 100, 0),
+        Glow = Color3.fromRGB(0, 255, 0)
+    },
+    Dark = {
+        Background = Color3.fromRGB(20, 20, 30),
+        Secondary = Color3.fromRGB(30, 30, 45),
+        Accent = Color3.fromRGB(65, 105, 225),
+        Text = Color3.fromRGB(255, 255, 255),
+        Success = Color3.fromRGB(50, 205, 50),
+        Warning = Color3.fromRGB(255, 165, 0),
+        Error = Color3.fromRGB(220, 20, 60),
+        Border = Color3.fromRGB(70, 70, 90),
+        Glow = Color3.fromRGB(100, 100, 255)
+    }
+}
+
 -- Конфигурация с автсохранением
 local Configuration = {
     CurrentTheme = "Cyber",
@@ -126,40 +197,15 @@ local Configuration = {
 local Animations = {
     Hover = function(Object, Theme)
         if not Object then return end
+        local originalColor = Object.BackgroundColor3
+        
         Object.MouseEnter:Connect(function()
-            SafeTween(Object, {BackgroundColor3 = Object.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.15)})
+            SafeTween(Object, {BackgroundColor3 = originalColor:Lerp(Color3.new(1, 1, 1), 0.15)})
         end)
         
         Object.MouseLeave:Connect(function()
-            SafeTween(Object, {BackgroundColor3 = Theme.Accent})
+            SafeTween(Object, {BackgroundColor3 = originalColor})
         end)
-    end,
-    
-    Pulse = function(Object, Theme)
-        if not Object then return end
-        local pulse = Instance.new("UIScale")
-        pulse.Parent = Object
-        
-        coroutine.wrap(function()
-            while Object and Object.Parent do
-                SafeTween(pulse, {Scale = 1.02}, 0.8, Enum.EasingStyle.Quad)
-                wait(0.8)
-                SafeTween(pulse, {Scale = 1}, 0.8, Enum.EasingStyle.Quad)
-                wait(2)
-            end
-        end)()
-    end,
-    
-    GlowPulse = function(Object, GlowColor)
-        if not Object then return end
-        coroutine.wrap(function()
-            while Object and Object.Parent do
-                SafeTween(Object, {ImageTransparency = 0.6}, 1, Enum.EasingStyle.Quad)
-                wait(1)
-                SafeTween(Object, {ImageTransparency = 0.8}, 1, Enum.EasingStyle.Quad)
-                wait(1)
-            end
-        end)()
     end
 }
 
@@ -262,78 +308,6 @@ function TelaryUI:CreateWindow(Config)
     -- Анимация появления
     SafeTween(Window.MainFrame, {Size = Config.Size or UDim2.new(0, 600, 0, 650)}, 0.6, Enum.EasingStyle.Back)
     
-    -- Вспомогательные функции
-    function CreateWindowControlButton(Window, Text, Color, Position)
-        local Button = Instance.new("TextButton")
-        Button.Size = UDim2.new(0, 30, 0, 30)
-        Button.Position = Position
-        Button.BackgroundColor3 = Color
-        Button.Text = Text
-        Button.TextColor3 = Window.Theme.Text
-        Button.TextSize = 16
-        Button.Font = Enum.Font.GothamBold
-        Button.Parent = Window.TitleBar
-        RoundCorners(Button, 6)
-        CreateGlow(Button, Color, 0.5)
-        return Button
-    end
-    
-    function SetupWindowDragging(Window)
-        local Dragging, DragInput, DragStart, StartPos
-        
-        local function Update(input)
-            if not Window.MainFrame then return end
-            local Delta = input.Position - DragStart
-            Window.MainFrame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
-        end
-        
-        Window.TitleBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                Dragging = true
-                DragStart = input.Position
-                StartPos = Window.MainFrame.Position
-                
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
-                        Dragging = false
-                    end
-                end)
-            end
-        end)
-        
-        Window.TitleBar.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement then
-                DragInput = input
-            end
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if input == DragInput and Dragging then
-                Update(input)
-            end
-        end)
-    end
-    
-    function SetupWindowControls(Window, CloseButton, MinimizeButton, SettingsButton)
-        if CloseButton then
-            CloseButton.MouseButton1Click:Connect(function()
-                Window:Destroy()
-            end)
-        end
-        
-        if MinimizeButton then
-            MinimizeButton.MouseButton1Click:Connect(function()
-                Window:Minimize()
-            end)
-        end
-        
-        if SettingsButton then
-            SettingsButton.MouseButton1Click:Connect(function()
-                Window:ShowSettings()
-            end)
-        end
-    end
-    
     -- Основные методы окна
     function Window:CreateTab(Name, Icon)
         local Tab = {}
@@ -407,7 +381,6 @@ function TelaryUI:CreateWindow(Config)
             SectionList.Padding = UDim.new(0, 12)
             SectionList.Parent = Section.Content
             
-            -- Улучшенный метод создания кнопок
             function Section:CreateButton(Config)
                 Config = Config or {}
                 local Button = Instance.new("TextButton")
@@ -431,7 +404,7 @@ function TelaryUI:CreateWindow(Config)
                             self.Window:Notify({
                                 Title = "Ошибка",
                                 Content = tostring(err),
-                                Type = "Error"
+                                Type = "error"
                             })
                         end
                     end
@@ -449,136 +422,6 @@ function TelaryUI:CreateWindow(Config)
                     end
                 }
             end
-            
-            -- Исправленный метод создания слайдера
-            function Section:CreateSlider(Config)
-                Config = Config or {}
-                local Slider = {}
-                Slider.Value = Config.Default or Config.Min or 0
-                Slider.Config = Config
-                
-                Slider.Frame = Instance.new("Frame")
-                Slider.Frame.Size = UDim2.new(1, 0, 0, 80)
-                Slider.Frame.BackgroundTransparency = 1
-                Slider.Frame.Parent = Section.Content
-                
-                Slider.Title = Instance.new("TextLabel")
-                Slider.Title.Size = UDim2.new(1, 0, 0, 25)
-                Slider.Title.BackgroundTransparency = 1
-                Slider.Title.Text = Config.Title or "Слайдер: " .. Slider.Value
-                Slider.Title.TextColor3 = self.Window.Theme.Text
-                Slider.Title.TextSize = 14
-                Slider.Title.Font = Enum.Font.Gotham
-                Slider.Title.TextXAlignment = Enum.TextXAlignment.Left
-                Slider.Title.Parent = Slider.Frame
-                
-                Slider.ValueLabel = Instance.new("TextLabel")
-                Slider.ValueLabel.Size = UDim2.new(0, 60, 0, 25)
-                Slider.ValueLabel.Position = UDim2.new(1, -60, 0, 0)
-                Slider.ValueLabel.BackgroundTransparency = 1
-                Slider.ValueLabel.Text = tostring(Slider.Value)
-                Slider.ValueLabel.TextColor3 = self.Window.Theme.Accent
-                Slider.ValueLabel.TextSize = 14
-                Slider.ValueLabel.Font = Enum.Font.GothamBold
-                Slider.ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
-                Slider.ValueLabel.Parent = Slider.Frame
-                
-                Slider.Track = Instance.new("TextButton") -- ИСПРАВЛЕНИЕ: Используем TextButton вместо Frame
-                Slider.Track.Size = UDim2.new(1, 0, 0, 10)
-                Slider.Track.Position = UDim2.new(0, 0, 0, 35)
-                Slider.Track.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-                Slider.Track.Text = ""
-                Slider.Track.AutoButtonColor = false
-                Slider.Track.Parent = Slider.Frame
-                RoundCorners(Slider.Track, 5)
-                
-                Slider.Fill = Instance.new("Frame")
-                Slider.Fill.Size = UDim2.new((Slider.Value - (Config.Min or 0)) / ((Config.Max or 100) - (Config.Min or 0)), 0, 1, 0)
-                Slider.Fill.BackgroundColor3 = self.Window.Theme.Accent
-                Slider.Fill.Parent = Slider.Track
-                RoundCorners(Slider.Fill, 5)
-                
-                Slider.Handle = Instance.new("TextButton")
-                Slider.Handle.Size = UDim2.new(0, 20, 0, 20)
-                Slider.Handle.Position = UDim2.new(Slider.Fill.Size.X.Scale, -10, 0.5, -10)
-                Slider.Handle.BackgroundColor3 = self.Window.Theme.Text
-                Slider.Handle.Text = ""
-                Slider.Handle.AutoButtonColor = false
-                Slider.Handle.Parent = Slider.Track
-                RoundCorners(Slider.Handle, 10)
-                CreateGlow(Slider.Handle, self.Window.Theme.Glow, 0.3)
-                
-                local Dragging = false
-                
-                local function UpdateSlider(Value)
-                    local Min = Config.Min or 0
-                    local Max = Config.Max or 100
-                    local Normalized = math.clamp((Value - Min) / (Max - Min), 0, 1)
-                    
-                    Slider.Value = math.floor(Value)
-                    Slider.Fill.Size = UDim2.new(Normalized, 0, 1, 0)
-                    Slider.Handle.Position = UDim2.new(Normalized, -10, 0.5, -10)
-                    Slider.Title.Text = Config.Title or "Слайдер: " .. Slider.Value
-                    Slider.ValueLabel.Text = tostring(Slider.Value)
-                    
-                    if Config.Callback then
-                        local success, err = pcall(Config.Callback, Slider.Value)
-                        if not success then
-                            self.Window:Notify({
-                                Title = "Ошибка",
-                                Content = tostring(err),
-                                Type = "Error"
-                            })
-                        end
-                    end
-                end
-                
-                -- ИСПРАВЛЕНИЕ: Правильная обработка событий мыши
-                Slider.Handle.MouseButton1Down:Connect(function()
-                    Dragging = true
-                end)
-                
-                Slider.Track.MouseButton1Down:Connect(function()
-                    if not Dragging then
-                        local mouse = UserInputService:GetMouseLocation()
-                        local trackAbsolutePos = Slider.Track.AbsolutePosition
-                        local trackAbsoluteSize = Slider.Track.AbsoluteSize
-                        local relativeX = (mouse.X - trackAbsolutePos.X) / trackAbsoluteSize.X
-                        local value = ((Config.Max or 100) - (Config.Min or 0)) * math.clamp(relativeX, 0, 1) + (Config.Min or 0)
-                        UpdateSlider(value)
-                    end
-                end)
-                
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                        Dragging = false
-                    end
-                end)
-                
-                UserInputService.InputChanged:Connect(function(input)
-                    if Dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                        local mouse = UserInputService:GetMouseLocation()
-                        local trackAbsolutePos = Slider.Track.AbsolutePosition
-                        local trackAbsoluteSize = Slider.Track.AbsoluteSize
-                        local relativeX = (mouse.X - trackAbsolutePos.X) / trackAbsoluteSize.X
-                        local value = ((Config.Max or 100) - (Config.Min or 0)) * math.clamp(relativeX, 0, 1) + (Config.Min or 0)
-                        UpdateSlider(value)
-                    end
-                end)
-                
-                Section.Elements[#Section.Elements + 1] = Slider.Frame
-                Section:UpdateSize()
-                
-                return {
-                    Object = Slider.Frame,
-                    Value = Slider.Value,
-                    Update = function(newValue)
-                        UpdateSlider(newValue)
-                    end
-                }
-            end
-            
-            -- Другие методы (Toggle, Dropdown, Input, Keybind) остаются аналогичными, но с исправлениями...
             
             function Section:UpdateSize()
                 local TotalHeight = 50
@@ -658,8 +501,8 @@ function TelaryUI:CreateWindow(Config)
         Icon.Size = UDim2.new(0, 50, 0, 50)
         Icon.Position = UDim2.new(0, 15, 0, 20)
         Icon.BackgroundTransparency = 1
-        Icon.Text = Config.Type == "Error" and "❌" or Config.Type == "Warning" and "⚠️" or "✅"
-        Icon.TextColor3 = Config.Type == "Error" and self.Theme.Error or Config.Type == "Warning" and self.Theme.Warning or self.Theme.Success
+        Icon.Text = Config.Type == "error" and "❌" or Config.Type == "warning" and "⚠️" or "✅"
+        Icon.TextColor3 = Config.Type == "error" and self.Theme.Error or Config.Type == "warning" and self.Theme.Warning or self.Theme.Success
         Icon.TextSize = 24
         Icon.Font = Enum.Font.GothamBold
         Icon.Parent = NotifyFrame
@@ -711,11 +554,10 @@ function TelaryUI:CreateWindow(Config)
     end
     
     function Window:ShowSettings()
-        -- Здесь можно добавить окно настроек
         self:Notify({
             Title = "Настройки",
             Content = "Окно настроек в разработке...",
-            Type = "Warning"
+            Type = "warning"
         })
     end
     
@@ -729,7 +571,7 @@ function TelaryUI:CreateWindow(Config)
     Window:Notify({
         Title = "Telary UI v3.0",
         Content = "Ультрасовременный интерфейс загружен!\nНаслаждайтесь новым дизайном и анимациями!",
-        Type = "Success",
+        Type = "success",
         Duration = 5
     })
     
@@ -740,7 +582,6 @@ end
 function TelaryUI:ChangeGlobalTheme(ThemeName)
     if Themes[ThemeName] then
         Configuration.CurrentTheme = ThemeName
-        -- Здесь будет обновление всех окон
     end
 end
 
