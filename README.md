@@ -6,7 +6,7 @@ Custom UI Library - это мощная и красивая библиотека
 lua
 
 -- Добавьте в начало вашего скрипта:
-local CustomUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/your-repo/custom-ui/main/library.lua"))()
+local CustomUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/your-repo/TelaryUI/main/TelaryUI.lua"))()
 
 🏗️ Создание окна
 Базовое окно
