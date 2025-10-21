@@ -1,4 +1,4 @@
-📚 Custom UI Library - Полный гайд по использованию
+📚 Telary UI Library - Полный гайд по использованию
 🎯 Введение
 
 Custom UI Library - это мощная и красивая библиотека для создания интерфейсов в Roblox, вдохновленная Rayfield. Библиотека предлагает современный дизайн, плавные анимации и простой в использовании API.
@@ -133,3 +133,188 @@ Window:Notify({
     Успех: Зеленый (#55FF55)
 
     Ошибка: Красный (#FF5555)
+
+📝 Практические примеры
+Пример 1: Меню для игры
+lua
+
+local CustomUI = loadstring(game:HttpGet("URL_БИБЛИОТЕКИ"))()
+
+local Window = CustomUI:CreateWindow({
+    Title = "🎮 Меню взломщика",
+    Size = UDim2.new(0, 500, 0, 450),
+    Center = true
+})
+
+local MainTab = Window:CreateTab("Главная", "🏠")
+
+-- Секция персонажа
+local CharacterSection = MainTab:CreateSection("Персонаж")
+
+CharacterSection:CreateToggle({
+    Title = "Бесконечный прыжок",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            game.Players.LocalPlayer.Character.Humanoid.JumpPower = 150
+        else
+            game.Players.LocalPlayer.Character.Humanoid.JumpPower = 50
+        end
+    end
+})
+
+CharacterSection:CreateSlider({
+    Title = "Скорость",
+    Min = 16,
+    Max = 100,
+    Default = 16,
+    Callback = function(Value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = Value
+    end
+})
+
+-- Секция телепортации
+local TeleportSection = MainTab:CreateSection("Телепортация")
+
+TeleportSection:CreateButton({
+    Title = "Телепорт на спавн",
+    Callback = function()
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
+        Window:Notify({
+            Title = "Телепорт",
+            Content = "Успешно телепортирован на спавн!"
+        })
+    end
+})
+
+Пример 2: Динамическое обновление
+lua
+
+local players = {"Игрок1", "Игрок2"}
+
+local dropdown = Section:CreateDropdown({
+    Title = "Игроки",
+    Options = players,
+    Callback = function(Selected)
+        print("Выбран: " .. Selected)
+    end
+})
+
+-- Обновление списка игроков
+game:GetService("Players").PlayerAdded:Connect(function(player)
+    table.insert(players, player.Name)
+    dropdown:Refresh(players)
+end)
+
+⚡ Советы и лучшие практики
+1. Организация кода
+lua
+
+-- Плохо
+Tab:CreateSection("Персонаж"):CreateButton({Title = "Кнопка1"})
+Tab:CreateSection("Персонаж"):CreateToggle({Title = "Тоггл1"})
+
+-- Хорошо
+local CharacterSection = Tab:CreateSection("Персонаж")
+CharacterSection:CreateButton({Title = "Кнопка1"})
+CharacterSection:CreateToggle({Title = "Тоггл1"})
+
+2. Обработка ошибок
+lua
+
+CharacterSection:CreateButton({
+    Title = "Опасное действие",
+    Callback = function()
+        local success, err = pcall(function()
+            -- Код который может вызвать ошибку
+        end)
+        
+        if not success then
+            Window:Notify({
+                Title = "Ошибка",
+                Content = "Что-то пошло не так: " .. err
+            })
+        end
+    end
+})
+
+3. Оптимизация
+lua
+
+-- Используйте переменные для часто используемых элементов
+local humanoid = game.Players.LocalPlayer.Character.Humanoid
+
+SpeedSlider:CreateSlider({
+    Callback = function(Value)
+        humanoid.WalkSpeed = Value  -- Используем существующую переменную
+    end
+})
+
+🔧 Расширенные возможности
+Получение значений элементов
+lua
+
+local toggle = Section:CreateToggle({
+    Title = "Мой тоггл",
+    Default = false
+})
+
+-- Проверить состояние
+print(toggle.Value)
+
+-- Изменить состояние программно
+toggle.Value = true
+toggle.Button.Text = "✅ Мой тоггл"
+
+Кастомные обработчики событий
+lua
+
+local button = Section:CreateButton({
+    Title = "Моя кнопка"
+})
+
+-- Добавляем дополнительные события
+button.MouseEnter:Connect(function()
+    print("Курсор над кнопкой")
+end)
+
+button.MouseLeave:Connect(function()
+    print("Курсор ушел с кнопки")
+end)
+
+🐛 Решение проблем
+Окно не появляется
+
+    Проверьте правильность URL библиотеки
+
+    Убедитесь что скрипт выполняется
+
+    Проверьте нет ли ошибок в Output
+
+Элементы не работают
+
+    Проверьте callback функции
+
+    Убедитесь что нет синтаксических ошибок
+
+    Проверьте правильность параметров
+
+Производительность
+
+    Не создавайте элементы в циклах без необходимости
+
+    Используйте Destroy() для удаления ненужных окон
+
+    Избегайте частых обновлений интерфейса
+
+📞 Поддержка
+
+Если у вас возникли проблемы:
+
+    Проверьте синтаксис
+
+    Убедитесь что все callback функции определены
+
+    Проверьте консоль на наличие ошибок
+
+    Следуйте примерам из этого гайда
