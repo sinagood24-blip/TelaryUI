@@ -293,7 +293,176 @@ function TelaryUI:CreateWindow(Config)
 end
 
 -- 📑 МЕТОДЫ ОКНА
-function Window:CreateTab(Name, Icon, Tooltip)
+function TelaryUI:Minimize()
+    self.Minimized = not self.Minimized
+    if self.Minimized then
+        SafeTween(self.MainFrame, {
+            Size = UDim2.new(0, 300, 0, 50),
+            BackgroundTransparency = 0.2
+        }, 0.3)
+        self.TabContainer.Visible = false
+        self.ControlButtons.Maximize.Visible = false
+    else
+        SafeTween(self.MainFrame, {
+            Size = self.OriginalSize,
+            BackgroundTransparency = 0.05
+        }, 0.3)
+        self.TabContainer.Visible = true
+        self.ControlButtons.Maximize.Visible = true
+    end
+end
+
+function TelaryUI:Maximize()
+    self.Maximized = not self.Maximized
+    if self.Maximized then
+        self.OriginalSize = self.MainFrame.Size
+        self.OriginalPosition = self.MainFrame.Position
+        SafeTween(self.MainFrame, {
+            Size = UDim2.new(1, -20, 1, -20),
+            Position = UDim2.new(0, 10, 0, 10)
+        }, 0.3)
+        self.ControlButtons.Maximize.Text = "❐"
+    else
+        SafeTween(self.MainFrame, {
+            Size = self.OriginalSize,
+            Position = self.OriginalPosition
+        }, 0.3)
+        self.ControlButtons.Maximize.Text = "□"
+    end
+end
+
+function TelaryUI:SetTitle(NewTitle)
+    local titleLabel = self.TitleBar:FindFirstChildWhichIsA("TextLabel")
+    if titleLabel then
+        titleLabel.Text = NewTitle
+    end
+end
+
+function TelaryUI:SetTheme(ThemeName)
+    if Themes[ThemeName] then
+        self.Theme = Themes[ThemeName]
+        self:ApplyTheme()
+    end
+end
+
+function TelaryUI:ApplyTheme()
+    self.MainFrame.BackgroundColor3 = self.Theme.Background
+    self.TitleBar.BackgroundColor3 = self.Theme.Secondary
+    self.ControlButtons.Close.BackgroundColor3 = self.Theme.Error
+    self.ControlButtons.Minimize.BackgroundColor3 = self.Theme.Warning
+    self.ControlButtons.Maximize.BackgroundColor3 = self.Theme.Success
+end
+
+function TelaryUI:Destroy()
+    if self.ScreenGui then
+        self.ScreenGui:Destroy()
+    end
+    if TelaryUI.Windows then
+        TelaryUI.Windows[self.ID] = nil
+    end
+end
+
+-- 🔔 СИСТЕМА УВЕДОМЛЕНИЙ
+function TelaryUI:Notify(Config)
+    Config = Config or {}
+    
+    local notifyGui = Instance.new("ScreenGui")
+    notifyGui.Name = "TelaryNotification"
+    notifyGui.Parent = CoreGui
+    notifyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    local notifyFrame = Instance.new("Frame")
+    notifyFrame.Size = UDim2.new(0, 380, 0, 90)
+    notifyFrame.Position = UDim2.new(1, 400, 0, 20)
+    notifyFrame.BackgroundColor3 = self.Theme.Secondary
+    notifyFrame.BackgroundTransparency = 0.1
+    notifyFrame.BorderSizePixel = 0
+    notifyFrame.Parent = notifyGui
+    RoundCorners(notifyFrame, 12)
+    CreateGlow(notifyFrame, self.Theme.Accent, 0.5)
+    CreateShadow(notifyFrame, 0.4, 12)
+    
+    local iconMap = {
+        success = "✅", error = "❌", warning = "⚠️", info = "💡", question = "❓"
+    }
+    
+    local icon = Instance.new("TextLabel")
+    icon.Size = UDim2.new(0, 45, 0, 45)
+    icon.Position = UDim2.new(0, 15, 0, 22)
+    icon.BackgroundTransparency = 1
+    icon.Text = iconMap[Config.Type] or "📢"
+    icon.TextColor3 = Config.Type == "error" and self.Theme.Error or 
+                     Config.Type == "warning" and self.Theme.Warning or 
+                     Config.Type == "info" and self.Theme.Accent or 
+                     self.Theme.Success
+    icon.TextSize = 22
+    icon.Font = Enum.Font.GothamBold
+    icon.Parent = notifyFrame
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -80, 0, 30)
+    title.Position = UDim2.new(0, 70, 0, 15)
+    title.BackgroundTransparency = 1
+    title.Text = Config.Title or "Уведомление"
+    title.TextColor3 = self.Theme.Text
+    title.TextSize = 16
+    title.Font = Enum.Font.GothamBold
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = notifyFrame
+    
+    local content = Instance.new("TextLabel")
+    content.Size = UDim2.new(1, -80, 0, 40)
+    content.Position = UDim2.new(0, 70, 0, 45)
+    content.BackgroundTransparency = 1
+    content.Text = Config.Content or ""
+    content.TextColor3 = self.Theme.Text
+    content.TextTransparency = 0.3
+    content.TextSize = 13
+    content.Font = Enum.Font.Gotham
+    content.TextXAlignment = Enum.TextXAlignment.Left
+    content.TextYAlignment = Enum.TextYAlignment.Top
+    content.TextWrapped = true
+    content.Parent = notifyFrame
+    
+    -- Анимация появления
+    SafeTween(notifyFrame, {
+        Position = UDim2.new(1, -400, 0, 20)
+    }, 0.6, Enum.EasingStyle.Back)
+    
+    local function safeDestroy()
+        if notifyGui and notifyGui.Parent then
+            SafeTween(notifyFrame, {
+                Position = UDim2.new(1, 400, 0, notifyFrame.Position.Y.Offset),
+                BackgroundTransparency = 1
+            }, 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
+                if notifyGui.Parent then
+                    notifyGui:Destroy()
+                end
+            end)
+        end
+    end
+    
+    -- Автоматическое закрытие
+    local duration = Config.Duration or 5
+    if duration > 0 then
+        delay(duration, safeDestroy)
+    end
+    
+    return {
+        Destroy = safeDestroy,
+        Update = function(newConfig)
+            if title and newConfig.Title then
+                title.Text = newConfig.Title
+            end
+            if content and newConfig.Content then
+                content.Text = newConfig.Content
+            end
+        end
+    }
+end
+
+-- 📑 МЕТОД СОЗДАНИЯ ВКЛАДКИ
+function TelaryUI:CreateTab(Name, Icon, Tooltip)
     local Tab = {}
     Tab.Name = Name
     Tab.Window = self
@@ -332,7 +501,38 @@ function Window:CreateTab(Name, Icon, Tooltip)
     
     Tab.Sections = {}
     
-    -- 📖 МЕТОДЫ ВКЛАДКИ
+    -- 🆕 МЕТОДЫ УПРАВЛЕНИЯ ВКЛАДКОЙ
+    function Tab:Show()
+        if self.Window.CurrentTab then
+            self.Window.CurrentTab.Content.Visible = false
+            SafeTween(self.Window.CurrentTab.Button, {
+                BackgroundColor3 = self.Window.Theme.Secondary,
+                TextColor3 = self.Window.Theme.Text
+            }, 0.2)
+        end
+        self.Window.CurrentTab = self
+        self.Content.Visible = true
+        SafeTween(self.Button, {
+            BackgroundColor3 = self.Window.Theme.Accent,
+            TextColor3 = Color3.new(1, 1, 1)
+        }, 0.3)
+        self.Content.CanvasPosition = Vector2.new(0, 0)
+    end
+    
+    Tab.Button.MouseButton1Click:Connect(function()
+        Tab:Show()
+    end)
+    
+    if self.AnimationsEnabled then
+        Animations.Hover(Tab.Button, self.Theme.Secondary, self.Theme.Accent:Lerp(Color3.new(1,1,1), 0.1))
+    end
+    
+    table.insert(self.Tabs, Tab)
+    if #self.Tabs == 1 then
+        Tab:Show()
+    end
+    
+    -- 🆕 МЕТОД СОЗДАНИЯ СЕКЦИИ
     function Tab:CreateSection(Name, Description, Collapsible)
         local Section = {}
         Section.Name = Name
@@ -997,207 +1197,7 @@ function Window:CreateTab(Name, Icon, Tooltip)
         return Section
     end
     
-    -- 🆕 МЕТОДЫ УПРАВЛЕНИЯ ВКЛАДКОЙ
-    function Tab:Show()
-        if self.Window.CurrentTab then
-            self.Window.CurrentTab.Content.Visible = false
-            SafeTween(self.Window.CurrentTab.Button, {
-                BackgroundColor3 = self.Window.Theme.Secondary,
-                TextColor3 = self.Window.Theme.Text
-            }, 0.2)
-        end
-        self.Window.CurrentTab = self
-        self.Content.Visible = true
-        SafeTween(self.Button, {
-            BackgroundColor3 = self.Window.Theme.Accent,
-            TextColor3 = Color3.new(1, 1, 1)
-        }, 0.3)
-        self.Content.CanvasPosition = Vector2.new(0, 0)
-    end
-    
-    Tab.Button.MouseButton1Click:Connect(function()
-        Tab:Show()
-    end)
-    
-    if Window.AnimationsEnabled then
-        Animations.Hover(Tab.Button, Window.Theme.Secondary, Window.Theme.Accent:Lerp(Color3.new(1,1,1), 0.1))
-    end
-    
-    table.insert(Window.Tabs, Tab)
-    if #Window.Tabs == 1 then
-        Tab:Show()
-    end
-    
     return Tab
-end
-
--- 🆕 МЕТОДЫ УПРАВЛЕНИЯ ОКНОМ
-function Window:Minimize()
-    self.Minimized = not self.Minimized
-    if self.Minimized then
-        SafeTween(self.MainFrame, {
-            Size = UDim2.new(0, 300, 0, 50),
-            BackgroundTransparency = 0.2
-        }, 0.3)
-        self.TabContainer.Visible = false
-        self.ControlButtons.Maximize.Visible = false
-    else
-        SafeTween(self.MainFrame, {
-            Size = self.OriginalSize,
-            BackgroundTransparency = 0.05
-        }, 0.3)
-        self.TabContainer.Visible = true
-        self.ControlButtons.Maximize.Visible = true
-    end
-end
-
-function Window:Maximize()
-    self.Maximized = not self.Maximized
-    if self.Maximized then
-        self.OriginalSize = self.MainFrame.Size
-        self.OriginalPosition = self.MainFrame.Position
-        SafeTween(self.MainFrame, {
-            Size = UDim2.new(1, -20, 1, -20),
-            Position = UDim2.new(0, 10, 0, 10)
-        }, 0.3)
-        self.ControlButtons.Maximize.Text = "❐"
-    else
-        SafeTween(self.MainFrame, {
-            Size = self.OriginalSize,
-            Position = self.OriginalPosition
-        }, 0.3)
-        self.ControlButtons.Maximize.Text = "□"
-    end
-end
-
-function Window:SetTitle(NewTitle)
-    local titleLabel = self.TitleBar:FindFirstChildWhichIsA("TextLabel")
-    if titleLabel then
-        titleLabel.Text = NewTitle
-    end
-end
-
-function Window:SetTheme(ThemeName)
-    if Themes[ThemeName] then
-        self.Theme = Themes[ThemeName]
-        self:ApplyTheme()
-    end
-end
-
-function Window:ApplyTheme()
-    self.MainFrame.BackgroundColor3 = self.Theme.Background
-    self.TitleBar.BackgroundColor3 = self.Theme.Secondary
-    self.ControlButtons.Close.BackgroundColor3 = self.Theme.Error
-    self.ControlButtons.Minimize.BackgroundColor3 = self.Theme.Warning
-    self.ControlButtons.Maximize.BackgroundColor3 = self.Theme.Success
-end
-
-function Window:Destroy()
-    if self.ScreenGui then
-        self.ScreenGui:Destroy()
-    end
-    if TelaryUI.Windows then
-        TelaryUI.Windows[self.ID] = nil
-    end
-end
-
--- 🔔 СИСТЕМА УВЕДОМЛЕНИЙ
-function Window:Notify(Config)
-    Config = Config or {}
-    
-    local notifyGui = Instance.new("ScreenGui")
-    notifyGui.Name = "TelaryNotification"
-    notifyGui.Parent = CoreGui
-    notifyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local notifyFrame = Instance.new("Frame")
-    notifyFrame.Size = UDim2.new(0, 380, 0, 90)
-    notifyFrame.Position = UDim2.new(1, 400, 0, 20)
-    notifyFrame.BackgroundColor3 = self.Theme.Secondary
-    notifyFrame.BackgroundTransparency = 0.1
-    notifyFrame.BorderSizePixel = 0
-    notifyFrame.Parent = notifyGui
-    RoundCorners(notifyFrame, 12)
-    CreateGlow(notifyFrame, self.Theme.Accent, 0.5)
-    CreateShadow(notifyFrame, 0.4, 12)
-    
-    local iconMap = {
-        success = "✅", error = "❌", warning = "⚠️", info = "💡", question = "❓"
-    }
-    
-    local icon = Instance.new("TextLabel")
-    icon.Size = UDim2.new(0, 45, 0, 45)
-    icon.Position = UDim2.new(0, 15, 0, 22)
-    icon.BackgroundTransparency = 1
-    icon.Text = iconMap[Config.Type] or "📢"
-    icon.TextColor3 = Config.Type == "error" and self.Theme.Error or 
-                     Config.Type == "warning" and self.Theme.Warning or 
-                     Config.Type == "info" and self.Theme.Accent or 
-                     self.Theme.Success
-    icon.TextSize = 22
-    icon.Font = Enum.Font.GothamBold
-    icon.Parent = notifyFrame
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -80, 0, 30)
-    title.Position = UDim2.new(0, 70, 0, 15)
-    title.BackgroundTransparency = 1
-    title.Text = Config.Title or "Уведомление"
-    title.TextColor3 = self.Theme.Text
-    title.TextSize = 16
-    title.Font = Enum.Font.GothamBold
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Parent = notifyFrame
-    
-    local content = Instance.new("TextLabel")
-    content.Size = UDim2.new(1, -80, 0, 40)
-    content.Position = UDim2.new(0, 70, 0, 45)
-    content.BackgroundTransparency = 1
-    content.Text = Config.Content or ""
-    content.TextColor3 = self.Theme.Text
-    content.TextTransparency = 0.3
-    content.TextSize = 13
-    content.Font = Enum.Font.Gotham
-    content.TextXAlignment = Enum.TextXAlignment.Left
-    content.TextYAlignment = Enum.TextYAlignment.Top
-    content.TextWrapped = true
-    content.Parent = notifyFrame
-    
-    -- Анимация появления
-    SafeTween(notifyFrame, {
-        Position = UDim2.new(1, -400, 0, 20)
-    }, 0.6, Enum.EasingStyle.Back)
-    
-    local function safeDestroy()
-        if notifyGui and notifyGui.Parent then
-            SafeTween(notifyFrame, {
-                Position = UDim2.new(1, 400, 0, notifyFrame.Position.Y.Offset),
-                BackgroundTransparency = 1
-            }, 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, function()
-                if notifyGui.Parent then
-                    notifyGui:Destroy()
-                end
-            end)
-        end
-    end
-    
-    -- Автоматическое закрытие
-    local duration = Config.Duration or 5
-    if duration > 0 then
-        delay(duration, safeDestroy)
-    end
-    
-    return {
-        Destroy = safeDestroy,
-        Update = function(newConfig)
-            if title and newConfig.Title then
-                title.Text = newConfig.Title
-            end
-            if content and newConfig.Content then
-                content.Text = newConfig.Content
-            end
-        end
-    }
 end
 
 -- 🌍 ГЛОБАЛЬНЫЕ ФУНКЦИИ
@@ -1283,7 +1283,6 @@ end
 function TelaryUI:CreateDemoWindow()
     local demoWindow = self:CreateWindow({
         Title = "Telary UI v4.5 - Демо",
-        Subtitle = "Демонстрация всех возможностей библиотеки",
         Size = UDim2.new(0, 800, 0, 700),
         Theme = "Cyber",
         Center = true
